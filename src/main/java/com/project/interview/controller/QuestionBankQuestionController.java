@@ -10,10 +10,12 @@ import com.project.interview.common.ResultUtils;
 import com.project.interview.constant.UserConstant;
 import com.project.interview.exception.BusinessException;
 import com.project.interview.exception.ThrowUtils;
+import com.project.interview.model.dto.question.QuestionBatchDeleteRequest;
 import com.project.interview.model.dto.questionbankquestion.QuestionBankQuestionAddRequest;
 import com.project.interview.model.dto.questionbankquestion.QuestionBankQuestionEditRequest;
 import com.project.interview.model.dto.questionbankquestion.QuestionBankQuestionQueryRequest;
 import com.project.interview.model.dto.questionbankquestion.QuestionBankQuestionUpdateRequest;
+import com.project.interview.model.dto.questionbankquestion.QuestionBankQuestionOptionRequest;
 import com.project.interview.model.entity.QuestionBankQuestion;
 import com.project.interview.model.entity.User;
 import com.project.interview.model.vo.QuestionBankQuestionVO;
@@ -21,12 +23,10 @@ import com.project.interview.service.QuestionBankQuestionService;
 import com.project.interview.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
-import java.util.Date;
 
 /**
  * questionBankQuestion接口
@@ -272,6 +272,44 @@ public class QuestionBankQuestionController {
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
         return ResultUtils.success(true);
     }
-        // endregion
+
+    @PostMapping("/add/batch")
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    public BaseResponse<Boolean> batchAddQuestionsToBank(
+            @RequestBody QuestionBankQuestionOptionRequest questionBankQuestionOptionRequest,
+            HttpServletRequest request) {
+        // 参数校验
+        ThrowUtils.throwIf(questionBankQuestionOptionRequest == null, ErrorCode.PARAMS_ERROR);
+        User loginUser = userService.getLoginUser(request);
+        Long questionBankId = questionBankQuestionOptionRequest.getQuestionBankId();
+        List<Long> questionIdList = questionBankQuestionOptionRequest.getQuestionIdList();
+        questionBankQuestionService.batchAddQuestionsToBank(questionIdList, questionBankId, loginUser);
+        return ResultUtils.success(true);
+    }
+
+    @PostMapping("/remove/batch")
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    public BaseResponse<Boolean> batchRemoveQuestionsFromBank(
+            @RequestBody QuestionBankQuestionOptionRequest questionBankQuestionOptionRequest,
+            HttpServletRequest request) {
+        // 参数校验
+        ThrowUtils.throwIf(questionBankQuestionOptionRequest == null, ErrorCode.PARAMS_ERROR);
+        Long questionBankId = questionBankQuestionOptionRequest.getQuestionBankId();
+        List<Long> questionIdList = questionBankQuestionOptionRequest.getQuestionIdList();
+        questionBankQuestionService.batchRemoveQuestionsFromBank(questionIdList, questionBankId);
+        return ResultUtils.success(true);
+    }
+
+    @PostMapping("/delete/batch")
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    public BaseResponse<Boolean> batchDeleteQuestions(@RequestBody QuestionBatchDeleteRequest questionBatchDeleteRequest, HttpServletRequest request) {
+        ThrowUtils.throwIf(questionBatchDeleteRequest == null, ErrorCode.PARAMS_ERROR);
+        questionService.batchDeleteQuestions(questionBatchDeleteRequest.getQuestionIdList());
+        return ResultUtils.success(true);
+    }
+
+
+
+    // endregion
 
 }
