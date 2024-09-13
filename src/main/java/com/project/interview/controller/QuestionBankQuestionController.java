@@ -27,6 +27,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+import java.util.List;
 
 /**
  * questionBankQuestion接口
@@ -304,7 +305,7 @@ public class QuestionBankQuestionController {
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<Boolean> batchDeleteQuestions(@RequestBody QuestionBatchDeleteRequest questionBatchDeleteRequest, HttpServletRequest request) {
         ThrowUtils.throwIf(questionBatchDeleteRequest == null, ErrorCode.PARAMS_ERROR);
-        questionService.batchDeleteQuestions(questionBatchDeleteRequest.getQuestionIdList());
+        questionBankQuestionService.batchDeleteQuestions(questionBatchDeleteRequest.getQuestionIdList());
         return ResultUtils.success(true);
     }
 
