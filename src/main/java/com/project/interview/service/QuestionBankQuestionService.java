@@ -35,4 +35,7 @@ public interface QuestionBankQuestionService extends IService<QuestionBankQuesti
 
     @Transactional(rollbackFor = Exception.class)
     void batchDeleteQuestions(List<Long> questionIdList);
+
+    @Transactional(rollbackFor = Exception.class)
+    void batchAddQuestionsToBankInner(List<QuestionBankQuestion> questionBankQuestionList);
 }
