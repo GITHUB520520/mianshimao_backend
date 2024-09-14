@@ -189,11 +189,12 @@ public class QuestionBankQuestionServiceImpl extends ServiceImpl<QuestionBankQue
         QuestionBank questionBank = questionBankService.getById(questionBankId);
         ThrowUtils.throwIf(questionBank == null, ErrorCode.NOT_FOUND_ERROR, "题库不存在");
 
-        List<Question> questionList = questionService.listByIds(questionIdList);
-        // 合法的题目 id
-        List<Long> validQuestionIdList = questionList.stream()
+        LambdaQueryWrapper<Question> questionLambdaQueryWrapper = Wrappers.lambdaQuery(Question.class)
+                .select(Question::getId).in(Question::getId, questionIdList);
+        List<Long> validQuestionIdList = questionService.list(questionLambdaQueryWrapper).stream()
                 .map(Question::getId)
-                .collect(Collectors.toList());
+                .collect(Collectors.toList());;
+        // 合法的题目 id
         ThrowUtils.throwIf(CollUtil.isEmpty(validQuestionIdList), ErrorCode.PARAMS_ERROR, "合法的题目列表为空");
 
         LambdaQueryWrapper<QuestionBankQuestion> lambdaQueryWrapper = Wrappers.lambdaQuery(QuestionBankQuestion.class)
