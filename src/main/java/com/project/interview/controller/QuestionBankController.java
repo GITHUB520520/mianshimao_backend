@@ -1,6 +1,7 @@
 package com.project.interview.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.jd.platform.hotkey.client.callback.JdHotKeyStore;
 import com.project.interview.annotation.AuthCheck;
 import com.project.interview.common.BaseResponse;
 import com.project.interview.common.DeleteRequest;
@@ -195,6 +196,19 @@ public class QuestionBankController {
         // 查询数据库
         QuestionBank questionBank = questionBankService.getById(id);
         ThrowUtils.throwIf(questionBank == null, ErrorCode.NOT_FOUND_ERROR);
+
+        // 生成 key
+        String key = "bank_detail_" + id;
+        // 如果是热 key
+        if (JdHotKeyStore.isHotKey(key)) {
+            // 从本地缓存中获取缓存值
+            Object cachedQuestionBankVO = JdHotKeyStore.get(key);
+            if (cachedQuestionBankVO != null) {
+                // 如果缓存中有值，直接返回缓存的值
+                return ResultUtils.success((QuestionBankVO) cachedQuestionBankVO);
+            }
+        }
+
         QuestionBankVO questionBankVO = questionBankService.getQuestionBankVO(questionBank, request);
         // 获取封装类
         boolean needQueryQuestionList = questionBankQueryRequest.isNeedQueryQuestionList();
@@ -205,6 +219,8 @@ public class QuestionBankController {
             Page<QuestionVO> questionVOPage = questionService.getQuestionVOPage(questionPage, request);
 
             questionBankVO.setQuestionPage(questionVOPage);
+            // 设置本地缓存
+            JdHotKeyStore.smartSet(key, questionBankVO);
         }
         return ResultUtils.success(questionBankVO);
     }
