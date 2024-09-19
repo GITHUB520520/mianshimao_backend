@@ -37,7 +37,7 @@ spring:
     uris: http://localhost:9200
     username: root
     password: 123456
-  # 文件上传
+#  # 文件上传
   servlet:
     multipart:
       # 大小限制
@@ -88,6 +88,7 @@ cos:
     secretKey: xxx
     region: xxx
     bucket: xxx
+
 # 接口文档配置
 knife4j:
   enable: true
@@ -99,3 +100,8 @@ knife4j:
         api-rule: package
         api-rule-resources:
           - com.project.interview.controller
+hotkey:
+  app-name: mianshimao
+  caffeine-size: 1000
+  etcd-server: http://127.0.0.1:2379
+  pushPeriod: 1000

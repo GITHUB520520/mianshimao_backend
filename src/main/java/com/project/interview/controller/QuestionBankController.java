@@ -6,9 +6,11 @@ import com.project.interview.common.BaseResponse;
 import com.project.interview.common.DeleteRequest;
 import com.project.interview.common.ErrorCode;
 import com.project.interview.common.ResultUtils;
+import com.project.interview.constant.SystemConstant;
 import com.project.interview.constant.UserConstant;
 import com.project.interview.exception.BusinessException;
 import com.project.interview.exception.ThrowUtils;
+import com.project.interview.manager.CacheManager;
 import com.project.interview.model.dto.question.QuestionQueryRequest;
 import com.project.interview.model.dto.questionbank.QuestionBankAddRequest;
 import com.project.interview.model.dto.questionbank.QuestionBankEditRequest;
@@ -49,6 +51,9 @@ public class QuestionBankController {
 
     @Resource
     private QuestionService questionService;
+
+    @Resource
+    private CacheManager cacheManager;
     
     // region 增删改查
 
@@ -141,12 +146,49 @@ public class QuestionBankController {
 
     /**
      * 根据 id 获取questionBank（封装类）
+     * 利用多级缓存（caffeine, redis)
      *
      * @param questionBankQueryRequest
      * @return
      */
     @GetMapping("/get/vo")
     public BaseResponse<QuestionBankVO> getQuestionBankVOById(QuestionBankQueryRequest questionBankQueryRequest, HttpServletRequest request) {
+        ThrowUtils.throwIf(questionBankQueryRequest == null, ErrorCode.PARAMS_ERROR);
+        Long id = questionBankQueryRequest.getId();
+        ThrowUtils.throwIf(id <= 0, ErrorCode.PARAMS_ERROR);
+        // 查询数据库
+        QuestionBank questionBank = questionBankService.getById(id);
+        ThrowUtils.throwIf(questionBank == null, ErrorCode.NOT_FOUND_ERROR);
+
+        String key = SystemConstant.getRedisKey(questionBankQueryRequest);
+        Object value = cacheManager.get(key);
+        if (value != null) {
+            return ResultUtils.success((QuestionBankVO) value);
+        }
+
+        QuestionBankVO questionBankVO = questionBankService.getQuestionBankVO(questionBank, request);
+        // 获取封装类
+        boolean needQueryQuestionList = questionBankQueryRequest.isNeedQueryQuestionList();
+        if (needQueryQuestionList) {
+            QuestionQueryRequest questionQueryRequest = new QuestionQueryRequest();
+            questionQueryRequest.setQuestionBankId(id);
+            Page<Question> questionPage = questionService.listQuestionByPage(questionQueryRequest);
+            Page<QuestionVO> questionVOPage = questionService.getQuestionVOPage(questionPage, request);
+            questionBankVO.setQuestionPage(questionVOPage);
+            cacheManager.put(key, questionBankVO);
+        }
+        return ResultUtils.success(questionBankVO);
+    }
+
+    /**
+     * 根据 id 获取questionBank（封装类）
+     * 利用 hotkey
+     *
+     * @param questionBankQueryRequest
+     * @return
+     */
+    @GetMapping("/get/vo/jd")
+    public BaseResponse<QuestionBankVO> getQuestionBankVOJdById(QuestionBankQueryRequest questionBankQueryRequest, HttpServletRequest request) {
         ThrowUtils.throwIf(questionBankQueryRequest == null, ErrorCode.PARAMS_ERROR);
         Long id = questionBankQueryRequest.getId();
         ThrowUtils.throwIf(id <= 0, ErrorCode.PARAMS_ERROR);
