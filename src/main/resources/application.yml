@@ -100,8 +100,8 @@ knife4j:
         api-rule: package
         api-rule-resources:
           - com.project.interview.controller
-hotkey:
-  app-name: mianshimao
-  caffeine-size: 1000
-  etcd-server: http://127.0.0.1:2379
-  pushPeriod: 1000
+#hotkey:
+#  app-name: mianshimao
+#  caffeine-size: 1000
+#  etcd-server: http://127.0.0.1:2379
+#  pushPeriod: 1000
