@@ -1,22 +1,34 @@
 package com.project.interview.controller;
 
+import com.alibaba.csp.sentinel.Entry;
+import com.alibaba.csp.sentinel.EntryType;
+import com.alibaba.csp.sentinel.SphU;
+import com.alibaba.csp.sentinel.Tracer;
+import com.alibaba.csp.sentinel.annotation.SentinelResource;
+import com.alibaba.csp.sentinel.slots.block.BlockException;
+import com.alibaba.csp.sentinel.slots.block.degrade.DegradeException;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.project.interview.annotation.AuthCheck;
 import com.project.interview.common.*;
+import com.project.interview.constant.SystemConstant;
 import com.project.interview.constant.UserConstant;
 import com.project.interview.exception.BusinessException;
 import com.project.interview.exception.ThrowUtils;
+import com.project.interview.manager.CacheManager;
 import com.project.interview.model.dto.question.QuestionQueryRequest;
 import com.project.interview.model.dto.question.*;
 import com.project.interview.model.entity.Question;
 import com.project.interview.model.entity.Question;
+import com.project.interview.model.entity.QuestionBank;
 import com.project.interview.model.entity.User;
+import com.project.interview.model.vo.QuestionBankVO;
 import com.project.interview.model.vo.QuestionVO;
 import com.project.interview.model.vo.QuestionVO;
 import com.project.interview.service.QuestionService;
 import com.project.interview.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
@@ -39,7 +51,9 @@ public class QuestionController {
 
     @Resource
     private UserService userService;
-    
+    @Autowired
+    private CacheManager cacheManager;
+
     // region 增删改查
 
     /**
@@ -175,12 +189,76 @@ public class QuestionController {
         long size = questionQueryRequest.getPageSize();
         // 限制爬虫
         ThrowUtils.throwIf(size > 20, ErrorCode.PARAMS_ERROR);
+
+        String key = SystemConstant.getListQuestionVOByPageRedisKey(questionQueryRequest);
+
+        Object value = cacheManager.get(key);
+        if (value != null){
+            return ResultUtils.success((Page<QuestionVO>) value);
+        }
         // 查询数据库
         Page<Question> questionPage = questionService.listQuestionByPage(questionQueryRequest);
+        Page<QuestionVO> questionVOPage = questionService.getQuestionVOPage(questionPage, request);
+        cacheManager.put(key, questionVOPage);
         // 获取封装类
-        return ResultUtils.success(questionService.getQuestionVOPage(questionPage, request));
+        return ResultUtils.success(questionVOPage);
     }
-    
+
+    /**
+     * 利用sentinel来对该接口做监控
+     * @param questionQueryRequest
+     * @param request
+     * @return
+     */
+    @PostMapping("/list/page/vo/sentinel")
+    public BaseResponse<Page<QuestionVO>> listQuestionVOByPageSentinel(@RequestBody QuestionQueryRequest questionQueryRequest,
+                                                                       HttpServletRequest request) {
+        ThrowUtils.throwIf(questionQueryRequest == null, ErrorCode.PARAMS_ERROR);
+        long size = questionQueryRequest.getPageSize();
+        // 限制爬虫
+        ThrowUtils.throwIf(size > 20, ErrorCode.PARAMS_ERROR);
+        // 基于 IP 限流
+        String remoteAddr = request.getRemoteAddr();
+        Entry entry = null;
+        try {
+            entry = SphU.entry("listQuestionVOByPage", EntryType.IN, 1, remoteAddr);
+            // 被保护的业务逻辑
+            // 查询数据库
+            Page<Question> questionPage = questionService.listQuestionByPage(questionQueryRequest);
+            // 获取封装类
+            return ResultUtils.success(questionService.getQuestionVOPage(questionPage, request));
+        } catch (Throwable ex) {
+            // 业务异常
+            if (!BlockException.isBlockException(ex)) {
+                Tracer.trace(ex);
+                return ResultUtils.error(ErrorCode.SYSTEM_ERROR, "系统错误");
+            }
+            // 降级操作
+            if (ex instanceof DegradeException) {
+                return fallbackHandler(questionQueryRequest, request, ex);
+            }
+            // 限流操作
+            return ResultUtils.error(ErrorCode.SYSTEM_ERROR, "访问过于频繁，请稍后再试");
+        } finally {
+            if (entry != null) {
+                entry.exit(1, remoteAddr);
+            }
+        }
+    }
+
+    /**
+     * 处理服务出现异常所要执行的任务
+     * @param questionQueryRequest
+     * @param request
+     * @param e
+     * @return
+     */
+    public BaseResponse<Page<QuestionVO>> fallbackHandler(@RequestBody QuestionQueryRequest questionQueryRequest,
+                                                       HttpServletRequest request, Throwable e){
+        String key = SystemConstant.getListQuestionVOByPageRedisKey(questionQueryRequest);
+        Object value = cacheManager.get(key);
+        return ResultUtils.success((Page<QuestionVO>) value);
+    }
 
     /**
      * 分页获取当前登录用户创建的question列表

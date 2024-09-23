@@ -1,5 +1,6 @@
 package com.project.interview.controller;
 
+import com.alibaba.csp.sentinel.Entry;
 import com.alibaba.csp.sentinel.annotation.SentinelResource;
 import com.alibaba.csp.sentinel.slots.block.BlockException;
 import com.alibaba.csp.sentinel.slots.block.degrade.DegradeException;
@@ -164,7 +165,7 @@ public class QuestionBankController {
         QuestionBank questionBank = questionBankService.getById(id);
         ThrowUtils.throwIf(questionBank == null, ErrorCode.NOT_FOUND_ERROR);
 
-        String key = SystemConstant.getRedisKey(questionBankQueryRequest);
+        String key = SystemConstant.getQuestionVORedisKey(questionBankQueryRequest);
         Object value = cacheManager.get(key);
         if (value != null) {
             return ResultUtils.success((QuestionBankVO) value);
@@ -267,6 +268,20 @@ public class QuestionBankController {
         return ResultUtils.success(questionBankService.getQuestionBankVOPage(questionBankPage, request));
     }
 
+    @PostMapping("/sentinel/list/page/vo")
+    public BaseResponse<Page<QuestionBankVO>> sentinelListQuestionBankVOByPage(@RequestBody QuestionBankQueryRequest questionBankQueryRequest,
+                                                                       HttpServletRequest request) {
+        long current = questionBankQueryRequest.getCurrent();
+        long size = questionBankQueryRequest.getPageSize();
+        // 限制爬虫
+        ThrowUtils.throwIf(size > 20, ErrorCode.PARAMS_ERROR);
+        // 查询数据库
+        Page<QuestionBank> questionBankPage = questionBankService.page(new Page<>(current, size),
+                questionBankService.getQueryWrapper(questionBankQueryRequest));
+        // 获取封装类
+        return ResultUtils.success(questionBankService.getQuestionBankVOPage(questionBankPage, request));
+    }
+
     /**
      * 处理服务熔断以及降级所要执行的任务
      *
@@ -290,10 +305,11 @@ public class QuestionBankController {
      * @return
      */
     public BaseResponse<Page<QuestionBankVO>> handleFallback(@RequestBody QuestionBankQueryRequest questionBankQueryRequest, HttpServletRequest request, Throwable ex) {
-        String key = SystemConstant.getRedisKey(questionBankQueryRequest);
+        String key = SystemConstant.getQuestionVORedisKey(questionBankQueryRequest);
         Object value = cacheManager.get(key);
         return ResultUtils.success((Page<QuestionBankVO>) value);
     }
+
     /**
      * 分页获取当前登录用户创建的questionBank列表
      *
