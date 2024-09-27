@@ -1,5 +1,6 @@
 package com.project.interview.controller;
 
+import cn.hutool.core.util.StrUtil;
 import com.alibaba.csp.sentinel.Entry;
 import com.alibaba.csp.sentinel.EntryType;
 import com.alibaba.csp.sentinel.SphU;
@@ -7,6 +8,7 @@ import com.alibaba.csp.sentinel.Tracer;
 import com.alibaba.csp.sentinel.annotation.SentinelResource;
 import com.alibaba.csp.sentinel.slots.block.BlockException;
 import com.alibaba.csp.sentinel.slots.block.degrade.DegradeException;
+import com.alibaba.nacos.api.exception.NacosException;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.project.interview.annotation.AuthCheck;
 import com.project.interview.common.*;
@@ -15,6 +17,7 @@ import com.project.interview.constant.UserConstant;
 import com.project.interview.exception.BusinessException;
 import com.project.interview.exception.ThrowUtils;
 import com.project.interview.manager.CacheManager;
+import com.project.interview.manager.NacosManager;
 import com.project.interview.model.dto.question.QuestionQueryRequest;
 import com.project.interview.model.dto.question.*;
 import com.project.interview.model.entity.Question;
@@ -26,6 +29,7 @@ import com.project.interview.model.vo.QuestionVO;
 import com.project.interview.model.vo.QuestionVO;
 import com.project.interview.service.QuestionService;
 import com.project.interview.service.UserService;
+import com.project.interview.utils.BlackIpUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -53,6 +57,9 @@ public class QuestionController {
     private UserService userService;
     @Autowired
     private CacheManager cacheManager;
+
+    @Resource
+    private NacosManager nacosManager;
 
     // region 增删改查
 
@@ -334,6 +341,13 @@ public class QuestionController {
         ThrowUtils.throwIf(size > 20, ErrorCode.PARAMS_ERROR);
         Page<Question> questionPage = questionService.searchFromEs(questionQueryRequest);
         return ResultUtils.success(questionService.getQuestionVOPage(questionPage, request));
+    }
+
+    @PostMapping("/addBlackIp")
+    public BaseResponse<Boolean> addBlackIp(@RequestBody BlackIpRequest blackIpRequest) throws NacosException {
+        ThrowUtils.throwIf(blackIpRequest == null || StrUtil.isBlank(blackIpRequest.getBlackIp()), ErrorCode.PARAMS_ERROR);
+        boolean b = nacosManager.addBlackIp(blackIpRequest.getBlackIp());
+        return ResultUtils.success(b);
     }
         // endregion
 

@@ -4,12 +4,26 @@ import cn.hutool.bloomfilter.BitMapBloomFilter;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.util.StrUtil;
+import com.alibaba.nacos.api.NacosFactory;
+import java.util.Properties;
+import com.alibaba.nacos.api.config.ConfigService;
+import com.alibaba.nacos.api.exception.NacosException;
+import org.springframework.beans.factory.annotation.Value;
 import org.yaml.snakeyaml.Yaml;
 
 import java.util.List;
 import java.util.Map;
 
 public class BlackIpUtils {
+
+    @Value("${nacos.config.server-addr}")
+    private static String serverAddr = "127.0.0.1:8848";
+
+    @Value("${nacos.config.data-id}")
+    private static String dataId;
+
+    @Value("${nacos.config.group}")
+    private static String group;
 
     private static BitMapBloomFilter bloomFilter;
 
@@ -42,4 +56,5 @@ public class BlackIpUtils {
             }
         }
     }
+
 }
