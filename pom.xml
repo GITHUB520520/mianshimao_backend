@@ -78,6 +78,13 @@
             <artifactId>sentinel-transport-simple-http</artifactId>
             <version>1.8.6</version>
         </dependency>
+        <!-- nacos -->
+        <dependency>
+            <groupId>com.alibaba.boot</groupId>
+            <artifactId>nacos-config-spring-boot-starter</artifactId>
+            <version>0.2.12</version>
+        </dependency>
+
         <!-- elasticsearch-->
         <dependency>
             <groupId>org.springframework.boot</groupId>
