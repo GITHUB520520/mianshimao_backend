@@ -1,5 +1,6 @@
 package com.project.interview.controller;
 
+import cn.dev33.satoken.annotation.SaCheckRole;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.csp.sentinel.Entry;
 import com.alibaba.csp.sentinel.EntryType;
@@ -10,7 +11,6 @@ import com.alibaba.csp.sentinel.slots.block.BlockException;
 import com.alibaba.csp.sentinel.slots.block.degrade.DegradeException;
 import com.alibaba.nacos.api.exception.NacosException;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.project.interview.annotation.AuthCheck;
 import com.project.interview.common.*;
 import com.project.interview.constant.SystemConstant;
 import com.project.interview.constant.UserConstant;
@@ -127,7 +127,7 @@ public class QuestionController {
      * @return
      */
     @PostMapping("/update")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @SaCheckRole(UserConstant.ADMIN_ROLE)
     public BaseResponse<Boolean> updateQuestion(@RequestBody QuestionUpdateRequest questionUpdateRequest) {
         if (questionUpdateRequest == null || questionUpdateRequest.getId() <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
@@ -173,7 +173,7 @@ public class QuestionController {
      * @return
      */
     @PostMapping("/list/page")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @SaCheckRole(UserConstant.ADMIN_ROLE)
     public BaseResponse<Page<Question>> listQuestionByPage(@RequestBody QuestionQueryRequest questionQueryRequest) {
         long current = questionQueryRequest.getCurrent();
         long size = questionQueryRequest.getPageSize();
@@ -341,13 +341,6 @@ public class QuestionController {
         ThrowUtils.throwIf(size > 20, ErrorCode.PARAMS_ERROR);
         Page<Question> questionPage = questionService.searchFromEs(questionQueryRequest);
         return ResultUtils.success(questionService.getQuestionVOPage(questionPage, request));
-    }
-
-    @PostMapping("/addBlackIp")
-    public BaseResponse<Boolean> addBlackIp(@RequestBody BlackIpRequest blackIpRequest) throws NacosException {
-        ThrowUtils.throwIf(blackIpRequest == null || StrUtil.isBlank(blackIpRequest.getBlackIp()), ErrorCode.PARAMS_ERROR);
-        boolean b = nacosManager.addBlackIp(blackIpRequest.getBlackIp());
-        return ResultUtils.success(b);
     }
         // endregion
 

@@ -12,7 +12,6 @@ import org.yaml.snakeyaml.Yaml;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 
 @Component
 @Slf4j
