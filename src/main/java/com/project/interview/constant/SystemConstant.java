@@ -14,6 +14,8 @@ public interface SystemConstant {
 
     String SYSTEM_LIST_QUESTION_KEY = "mianshiya:listQuestionVOByPage";
 
+    String SYSTEM_ACCESS = "mianshiya:access";
+
     /**
      * 获取 Redis key
      *
@@ -35,5 +37,9 @@ public interface SystemConstant {
         String str = JSONUtil.toJsonStr(questionQueryRequest);
         String key = DigestUtil.md5Hex(str);
         return String.format("%s:%s", SYSTEM_LIST_QUESTION_KEY, key);
+    }
+
+    static String getAccessRedisKey(long userId) {
+        return String.format("%s:%s", SYSTEM_ACCESS, userId);
     }
 }

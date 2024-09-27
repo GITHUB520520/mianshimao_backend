@@ -113,6 +113,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             log.info("user login failed, userAccount cannot match userPassword");
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户不存在或密码错误");
         }
+
+        if (user.getUserRole().equals(UserRoleEnum.BAN.getValue())){
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "该用户已被封禁!");
+        }
         // 3. 记录用户的登录态
 //        request.getSession().setAttribute(USER_LOGIN_STATE, user);
         StpUtil.login(user.getId(), DeviceUtils.getRequestDevice(request));

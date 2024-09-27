@@ -30,6 +30,16 @@ spring:
     host: localhost
     port: 6379
     timeout: 5000
+    lettuce:
+      pool:
+        # 连接池最大连接数
+        max-active: 200
+        # 连接池最大阻塞等待时间（使用负值表示没有限制）
+        max-wait: -1ms
+        # 连接池中的最大空闲连接
+        max-idle: 10
+        # 连接池中的最小空闲连接
+        min-idle: 0
 #    password: 123456
   # Elasticsearch 配置
   # todo 需替换配置，然后取消注释
