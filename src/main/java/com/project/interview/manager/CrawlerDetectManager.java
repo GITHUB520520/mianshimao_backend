@@ -43,16 +43,22 @@ public class CrawlerDetectManager {
     @NacosValue(value = "${banCount}" , autoRefreshed = true)
     private int BAN_COUNT;
 
+    @NacosValue(value = "${timeInterval}" , autoRefreshed = true)
+    private int timeInterval;
+
+    @NacosValue(value = "${expireTime}" , autoRefreshed = true)
+    private int expireTime;
+
 
     /**
      * 检测操作是否过于频繁（爬虫）
      * @param loginUserId
      */
     public void crawlerDetect(long loginUserId) throws NacosException {
-//        log.info("warnCount is {}, banCount is {}",WARN_COUNT, BAN_COUNT);
+        log.info("warnCount is {}, banCount is {}, timeInterval is {}, expireTime is {}",WARN_COUNT, BAN_COUNT, timeInterval, expireTime);
         if (loginUserId <= 0) throw new BusinessException(ErrorCode.PARAMS_ERROR);
         String key = SystemConstant.getAccessRedisKey(loginUserId);
-        long count = counterManager.incrAndGetCounter(key, 1, TimeUnit.MINUTES, 120);
+        long count = counterManager.incrAndGetCounter(key, timeInterval, TimeUnit.MINUTES, expireTime);
         if (count >= BAN_COUNT){
             StpUtil.kickout(loginUserId);
             User user = new User();
