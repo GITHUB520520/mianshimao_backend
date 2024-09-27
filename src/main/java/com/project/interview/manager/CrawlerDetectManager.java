@@ -1,0 +1,68 @@
+package com.project.interview.manager;
+
+import cn.dev33.satoken.stp.StpUtil;
+import com.alibaba.nacos.api.annotation.NacosInjected;
+import com.alibaba.nacos.api.config.ConfigService;
+import com.alibaba.nacos.api.config.annotation.NacosValue;
+import com.alibaba.nacos.api.exception.NacosException;
+import com.project.interview.common.ErrorCode;
+import com.project.interview.constant.SystemConstant;
+import com.project.interview.exception.BusinessException;
+import com.project.interview.model.entity.User;
+import com.project.interview.model.enums.UserRoleEnum;
+import com.project.interview.service.UserService;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+import javax.annotation.Resource;
+import java.util.concurrent.TimeUnit;
+
+@Component
+@Slf4j
+public class CrawlerDetectManager {
+
+    @Resource
+    private UserService userService;
+
+    @NacosInjected
+    private ConfigService configService;
+
+    @Value("${nacos.config.data-id}")
+    private String dataId;
+
+    @Value("${nacos.config.group}")
+    private String group;
+
+    @Resource
+    private CounterManager counterManager;
+
+    @NacosValue(value = "${warnCount}", autoRefreshed = true)
+    private int WARN_COUNT;
+
+    @NacosValue(value = "${banCount}" , autoRefreshed = true)
+    private int BAN_COUNT;
+
+
+    /**
+     * 检测操作是否过于频繁（爬虫）
+     * @param loginUserId
+     */
+    public void crawlerDetect(long loginUserId) throws NacosException {
+//        log.info("warnCount is {}, banCount is {}",WARN_COUNT, BAN_COUNT);
+        if (loginUserId <= 0) throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        String key = SystemConstant.getAccessRedisKey(loginUserId);
+        long count = counterManager.incrAndGetCounter(key, 1, TimeUnit.MINUTES, 120);
+        if (count >= BAN_COUNT){
+            StpUtil.kickout(loginUserId);
+            User user = new User();
+            user.setId(loginUserId);
+            user.setUserRole(UserRoleEnum.BAN.getValue());
+            userService.updateById(user);
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "操作过于频繁，已被封禁!");
+        }
+        if (count == WARN_COUNT){
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "操作过于频繁!");
+        }
+    }
+}

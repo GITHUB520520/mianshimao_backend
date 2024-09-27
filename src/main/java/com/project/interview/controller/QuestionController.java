@@ -19,6 +19,7 @@ import com.project.interview.exception.BusinessException;
 import com.project.interview.exception.ThrowUtils;
 import com.project.interview.manager.CacheManager;
 import com.project.interview.manager.CounterManager;
+import com.project.interview.manager.CrawlerDetectManager;
 import com.project.interview.manager.NacosManager;
 import com.project.interview.model.dto.question.QuestionQueryRequest;
 import com.project.interview.model.dto.question.*;
@@ -38,10 +39,13 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+import org.yaml.snakeyaml.Yaml;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.util.Date;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -63,10 +67,7 @@ public class QuestionController {
     private CacheManager cacheManager;
 
     @Resource
-    private NacosManager nacosManager;
-
-    @Resource
-    private CounterManager counterManager;
+    private CrawlerDetectManager crawlerDetect;
 
     // region 增删改查
 
@@ -164,10 +165,10 @@ public class QuestionController {
      * @return
      */
     @GetMapping("/get/vo")
-    public BaseResponse<QuestionVO> getQuestionVOById(long id, HttpServletRequest request) {
+    public BaseResponse<QuestionVO> getQuestionVOById(long id, HttpServletRequest request) throws NacosException {
         ThrowUtils.throwIf(id <= 0, ErrorCode.PARAMS_ERROR);
         // 查询数据库
-        crawlerDetect(userService.getLoginUser(request).getId());
+        crawlerDetect.crawlerDetect(userService.getLoginUser(request).getId());
         Question question = questionService.getById(id);
         ThrowUtils.throwIf(question == null, ErrorCode.NOT_FOUND_ERROR);
         // 获取封装类
@@ -351,28 +352,6 @@ public class QuestionController {
         return ResultUtils.success(questionService.getQuestionVOPage(questionPage, request));
     }
 
-    /**
-     * 检测操作是否过于频繁（爬虫）
-     * @param loginUserId
-     */
-    public void crawlerDetect(long loginUserId){
-        if (loginUserId <= 0) throw new BusinessException(ErrorCode.PARAMS_ERROR);
-        int WARN_COUNT = 10;
-        int BAN_COUNT = 20;
-        String key = SystemConstant.getAccessRedisKey(loginUserId);
-        long count = counterManager.incrAndGetCounter(key, 1, TimeUnit.MINUTES, 120);
-        if (count >= BAN_COUNT){
-            StpUtil.kickout(loginUserId);
-            User user = new User();
-            user.setId(loginUserId);
-            user.setUserRole(UserRoleEnum.BAN.getValue());
-            userService.updateById(user);
-            throw new BusinessException(ErrorCode.OPERATION_ERROR, "操作过于频繁，已被封禁!");
-        }
-        if (count == WARN_COUNT){
-            throw new BusinessException(ErrorCode.OPERATION_ERROR, "操作过于频繁!");
-        }
-    }
         // endregion
 
 }
