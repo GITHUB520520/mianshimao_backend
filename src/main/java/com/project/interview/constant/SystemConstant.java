@@ -16,6 +16,8 @@ public interface SystemConstant {
 
     String SYSTEM_ACCESS = "mianshiya:access";
 
+    String SYSTEM_LOGIN = "mianshiya:login";
+
     /**
      * 获取 Redis key
      *
@@ -41,5 +43,9 @@ public interface SystemConstant {
 
     static String getAccessRedisKey(long userId) {
         return String.format("%s:%s", SYSTEM_ACCESS, userId);
+    }
+
+    static String getLoginRedisKey(long userId){
+        return String.format("%s:%s", SYSTEM_LOGIN, userId);
     }
 }

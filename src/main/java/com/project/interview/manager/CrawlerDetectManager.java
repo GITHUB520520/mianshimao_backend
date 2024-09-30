@@ -53,11 +53,11 @@ public class CrawlerDetectManager {
     /**
      * 检测操作是否过于频繁（爬虫）
      * @param loginUserId
+     * @param key
      */
-    public void crawlerDetect(long loginUserId) throws NacosException {
+    public void crawlerDetect(String key, long loginUserId) throws NacosException {
         log.info("warnCount is {}, banCount is {}, timeInterval is {}, expireTime is {}",WARN_COUNT, BAN_COUNT, timeInterval, expireTime);
         if (loginUserId <= 0) throw new BusinessException(ErrorCode.PARAMS_ERROR);
-        String key = SystemConstant.getAccessRedisKey(loginUserId);
         long count = counterManager.incrAndGetCounter(key, timeInterval, TimeUnit.MINUTES, expireTime);
         if (count >= BAN_COUNT){
             StpUtil.kickout(loginUserId);

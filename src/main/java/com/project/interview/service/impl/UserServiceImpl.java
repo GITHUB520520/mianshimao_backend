@@ -4,12 +4,15 @@ import static com.project.interview.constant.UserConstant.USER_LOGIN_STATE;
 
 import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.core.collection.CollUtil;
+import com.alibaba.nacos.api.exception.NacosException;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.project.interview.common.ErrorCode;
 import com.project.interview.constant.CommonConstant;
 import com.project.interview.constant.RedisConstant;
+import com.project.interview.constant.SystemConstant;
 import com.project.interview.exception.BusinessException;
+import com.project.interview.manager.CrawlerDetectManager;
 import com.project.interview.mapper.UserMapper;
 import com.project.interview.model.dto.user.UserQueryRequest;
 import com.project.interview.model.entity.User;
@@ -31,6 +34,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.redisson.api.RBitSet;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.BeanUtils;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
 
@@ -45,6 +49,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
     @Resource
     private RedissonClient redissonClient;
+
+    @Resource
+    @Lazy
+    private CrawlerDetectManager crawlerDetectManager;
     /**
      * 盐值，混淆密码
      */
@@ -117,6 +125,14 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         if (user.getUserRole().equals(UserRoleEnum.BAN.getValue())){
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "该用户已被封禁!");
         }
+
+        String key = SystemConstant.getLoginRedisKey(user.getId());
+        try {
+            crawlerDetectManager.crawlerDetect(key, user.getId());
+        } catch (NacosException e) {
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR);
+        }
+
         // 3. 记录用户的登录态
 //        request.getSession().setAttribute(USER_LOGIN_STATE, user);
         StpUtil.login(user.getId(), DeviceUtils.getRequestDevice(request));

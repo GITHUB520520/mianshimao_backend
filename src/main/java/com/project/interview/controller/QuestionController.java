@@ -165,10 +165,12 @@ public class QuestionController {
      * @return
      */
     @GetMapping("/get/vo")
-    public BaseResponse<QuestionVO> getQuestionVOById(long id, HttpServletRequest request) throws NacosException {
+    public BaseResponse<QuestionVO> getQuestionVOById(Long id, HttpServletRequest request) throws NacosException {
         ThrowUtils.throwIf(id <= 0, ErrorCode.PARAMS_ERROR);
+        User user = userService.getLoginUser(request);
         // 查询数据库
-        crawlerDetect.crawlerDetect(userService.getLoginUser(request).getId());
+        String key = SystemConstant.getAccessRedisKey(user.getId());
+        crawlerDetect.crawlerDetect(key, user.getId());
         Question question = questionService.getById(id);
         ThrowUtils.throwIf(question == null, ErrorCode.NOT_FOUND_ERROR);
         // 获取封装类
@@ -194,6 +196,7 @@ public class QuestionController {
 
     /**
      * 分页获取question列表（封装类）
+     * 采用多级缓存
      *
      * @param questionQueryRequest
      * @param request
