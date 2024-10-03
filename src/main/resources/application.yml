@@ -40,6 +40,14 @@ spring:
         max-idle: 10
         # 连接池中的最小空闲连接
         min-idle: 0
+
+  # RabbitMQ 配置
+  rabbitmq:
+    host: 192.168.23.134 # 你的虚拟机IP
+    port: 5672 # 端口
+    virtual-host: /test # 虚拟主机
+    username: admin # 用户名
+    password: 123456 # 密码
 #    password: 123456
   # Elasticsearch 配置
   # todo 需替换配置，然后取消注释

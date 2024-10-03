@@ -24,7 +24,7 @@ public class DockerClientService {
      * @return
      */
     public DockerClient connectDocker(){
-        DockerClient dockerClient = DockerClientBuilder.getInstance("tcp://192.168.23.130:2375").build();
+        DockerClient dockerClient = DockerClientBuilder.getInstance("tcp://192.168.23.134:2375").build();
         Info info = dockerClient.infoCmd().exec();
         String infoStr = JSONObject.toJSONString(info);
         System.out.println("docker的环境信息如下：=================");
@@ -92,7 +92,7 @@ public class DockerClientService {
         client.removeContainerCmd(containerId).exec();
     }
     public static void main(String[] args) throws IOException {
-        DockerClient dockerClient = DockerClientBuilder.getInstance("tcp://192.168.23.130:2375").build();
+        DockerClient dockerClient = DockerClientBuilder.getInstance("tcp://192.168.23.134:2375").build();
 
         // 示例：列出所有容器
         List<Container> containers = dockerClient.listContainersCmd().exec();
