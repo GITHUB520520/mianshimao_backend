@@ -49,13 +49,15 @@ public class CrawlerDetectManager {
     @NacosValue(value = "${expireTime}" , autoRefreshed = true)
     private int expireTime;
 
+    @Resource
+    private NacosManager nacosManager;
 
     /**
      * 检测操作是否过于频繁（爬虫）
      * @param loginUserId
      * @param key
      */
-    public void crawlerDetect(String key, long loginUserId) throws NacosException {
+    public void crawlerDetect(String key, long loginUserId, String remoteAddr) throws NacosException {
         log.info("warnCount is {}, banCount is {}, timeInterval is {}, expireTime is {}",WARN_COUNT, BAN_COUNT, timeInterval, expireTime);
         if (loginUserId <= 0) throw new BusinessException(ErrorCode.PARAMS_ERROR);
         long count = counterManager.incrAndGetCounter(key, timeInterval, TimeUnit.MINUTES, expireTime);
@@ -65,6 +67,7 @@ public class CrawlerDetectManager {
             user.setId(loginUserId);
             user.setUserRole(UserRoleEnum.BAN.getValue());
             userService.updateById(user);
+            nacosManager.addBlackIp(remoteAddr);
             throw new BusinessException(ErrorCode.OPERATION_ERROR, "操作过于频繁，已被封禁!");
         }
         if (count == WARN_COUNT){

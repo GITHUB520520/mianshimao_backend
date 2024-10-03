@@ -28,7 +28,7 @@ public class NacosManager {
 
     public boolean addBlackIp(String ip) throws NacosException {
         String content = configService.getConfig(dataId, group, 5000);
-        log.info("nacos config content: {}", content);
+//        log.info("nacos config content: {}", content);
         Yaml yaml = new Yaml();
         Map map = yaml.loadAs(content, Map.class);
         // 获取 ip 黑名单

@@ -168,9 +168,10 @@ public class QuestionController {
     public BaseResponse<QuestionVO> getQuestionVOById(Long id, HttpServletRequest request) throws NacosException {
         ThrowUtils.throwIf(id <= 0, ErrorCode.PARAMS_ERROR);
         User user = userService.getLoginUser(request);
+        String remoteAddr = request.getRemoteAddr();
         // 查询数据库
         String key = SystemConstant.getAccessRedisKey(user.getId());
-        crawlerDetect.crawlerDetect(key, user.getId());
+        crawlerDetect.crawlerDetect(key, user.getId(), remoteAddr);
         Question question = questionService.getById(id);
         ThrowUtils.throwIf(question == null, ErrorCode.NOT_FOUND_ERROR);
         // 获取封装类

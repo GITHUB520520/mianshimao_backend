@@ -128,7 +128,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
         String key = SystemConstant.getLoginRedisKey(user.getId());
         try {
-            crawlerDetectManager.crawlerDetect(key, user.getId());
+            String remoteAddr = request.getRemoteAddr();
+            crawlerDetectManager.crawlerDetect(key, user.getId(), remoteAddr);
         } catch (NacosException e) {
             throw new BusinessException(ErrorCode.SYSTEM_ERROR);
         }
