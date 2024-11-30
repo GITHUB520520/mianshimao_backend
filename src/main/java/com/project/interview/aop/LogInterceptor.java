@@ -18,8 +18,8 @@ import org.springframework.web.context.request.ServletRequestAttributes;
  *
  *
  **/
-@Aspect
-@Component
+//@Aspect
+//@Component
 @Slf4j
 public class LogInterceptor {
 

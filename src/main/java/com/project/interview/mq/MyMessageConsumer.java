@@ -8,7 +8,7 @@ import org.springframework.amqp.support.AmqpHeaders;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
 
-@Component
+//@Component
 @Slf4j
 public class MyMessageConsumer {
 

@@ -69,6 +69,9 @@ public class QuestionController {
     @Resource
     private CrawlerDetectManager crawlerDetect;
 
+    @Resource
+    private NacosManager nacosManager;
+
     // region 增删改查
 
     /**
@@ -167,11 +170,11 @@ public class QuestionController {
     @GetMapping("/get/vo")
     public BaseResponse<QuestionVO> getQuestionVOById(Long id, HttpServletRequest request) throws NacosException {
         ThrowUtils.throwIf(id <= 0, ErrorCode.PARAMS_ERROR);
-        User user = userService.getLoginUser(request);
         String remoteAddr = request.getRemoteAddr();
-        // 查询数据库
-        String key = SystemConstant.getAccessRedisKey(user.getId());
-        crawlerDetect.crawlerDetect(key, user.getId(), remoteAddr);
+        log.info("ip is {}", remoteAddr);
+//        // 查询数据库
+        String key = SystemConstant.getAccessIpRedisKey(remoteAddr);
+        crawlerDetect.crawlerIpDetect(key, remoteAddr);
         Question question = questionService.getById(id);
         ThrowUtils.throwIf(question == null, ErrorCode.NOT_FOUND_ERROR);
         // 获取封装类

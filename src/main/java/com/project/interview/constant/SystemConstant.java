@@ -45,6 +45,10 @@ public interface SystemConstant {
         return String.format("%s:%s", SYSTEM_ACCESS, userId);
     }
 
+    static  String getAccessIpRedisKey(String ip) {
+        return String.format("%s:%s", SYSTEM_ACCESS, ip);
+    }
+
     static String getLoginRedisKey(long userId){
         return String.format("%s:%s", SYSTEM_LOGIN, userId);
     }

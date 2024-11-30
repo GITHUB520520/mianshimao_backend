@@ -74,4 +74,22 @@ public class CrawlerDetectManager {
             throw new BusinessException(ErrorCode.OPERATION_ERROR, "操作过于频繁!");
         }
     }
+
+    /**
+     * 对刷量的ip进行封禁警告
+     * @param key
+     * @param remoteAddr
+     * @throws NacosException
+     */
+    public void crawlerIpDetect(String key, String remoteAddr) throws NacosException {
+        log.info("warnCount is {}, banCount is {}, timeInterval is {}, expireTime is {}",WARN_COUNT, BAN_COUNT, timeInterval, expireTime);
+        long count = counterManager.incrAndGetCounter(key, timeInterval, TimeUnit.MINUTES, expireTime);
+        if (count >= BAN_COUNT){
+            nacosManager.addBlackIp(remoteAddr);
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "操作过于频繁，已被封禁!");
+        }
+        if (count == WARN_COUNT){
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "操作过于频繁!");
+        }
+    }
 }
