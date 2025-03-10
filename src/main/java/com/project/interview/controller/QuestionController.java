@@ -170,11 +170,11 @@ public class QuestionController {
     @GetMapping("/get/vo")
     public BaseResponse<QuestionVO> getQuestionVOById(Long id, HttpServletRequest request) throws NacosException {
         ThrowUtils.throwIf(id <= 0, ErrorCode.PARAMS_ERROR);
-        String remoteAddr = request.getRemoteAddr();
-        log.info("ip is {}", remoteAddr);
-//        // 查询数据库
-        String key = SystemConstant.getAccessIpRedisKey(remoteAddr);
-        crawlerDetect.crawlerIpDetect(key, remoteAddr);
+//        String remoteAddr = request.getRemoteAddr();
+//        log.info("ip is {}", remoteAddr);
+////        // 查询数据库
+//        String key = SystemConstant.getAccessIpRedisKey(remoteAddr);
+//        crawlerDetect.crawlerIpDetect(key, remoteAddr);
         Question question = questionService.getById(id);
         ThrowUtils.throwIf(question == null, ErrorCode.NOT_FOUND_ERROR);
         // 获取封装类
@@ -359,6 +359,18 @@ public class QuestionController {
         return ResultUtils.success(questionService.getQuestionVOPage(questionPage, request));
     }
 
+    @PostMapping("/ai/generate/question")
+    @SaCheckRole(UserConstant.ADMIN_ROLE)
+    public BaseResponse<Boolean> aiGenerateQuestions(@RequestBody QuestionAIGenerateRequest questionAIGenerateRequest, HttpServletRequest request){
+        ThrowUtils.throwIf(questionAIGenerateRequest == null, ErrorCode.PARAMS_ERROR);
+        String questionType = questionAIGenerateRequest.getQuestionType();
+        int number = questionAIGenerateRequest.getNumber();
+        ThrowUtils.throwIf(number <= 0, ErrorCode.PARAMS_ERROR);
+        ThrowUtils.throwIf(StrUtil.isBlank(questionType), ErrorCode.PARAMS_ERROR);
+        User loginUser = userService.getLoginUser(request);
+        boolean b = questionService.aiGenerateQuestions(questionType, number, loginUser);
+        return ResultUtils.success(b);
+    }
         // endregion
 
 }

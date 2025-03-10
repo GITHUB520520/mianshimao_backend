@@ -10,7 +10,7 @@ import java.util.List;
  *
  *
  */
-public interface QuestionEsDao extends ElasticsearchRepository<QuestionEsDTO, Long> {
-
-    List<QuestionEsDTO> findByUserId(Long userId);
-}
+//public interface QuestionEsDao extends ElasticsearchRepository<QuestionEsDTO, Long> {
+//
+//    List<QuestionEsDTO> findByUserId(Long userId);
+//}

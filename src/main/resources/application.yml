@@ -51,10 +51,10 @@ spring:
 #    password: 123456
   # Elasticsearch 配置
   # todo 需替换配置，然后取消注释
-  elasticsearch:
-    uris: http://localhost:9200
-    username: root
-    password: 123456
+#  elasticsearch:
+#    uris: http://localhost:9200
+#    username: root
+#    password: 123456adm
 
 # saToken
 sa-token:
@@ -153,3 +153,5 @@ knife4j:
 #  caffeine-size: 1000
 #  etcd-server: http://127.0.0.1:2379
 #  pushPeriod: 1000
+ai:
+  volcengine: 95a6227a-30be-4b18-846e-8fbb205fdfa5

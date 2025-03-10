@@ -1,6 +1,8 @@
 package com.project.interview.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -9,7 +11,9 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.project.interview.common.ErrorCode;
 import com.project.interview.constant.CommonConstant;
+import com.project.interview.exception.BusinessException;
 import com.project.interview.exception.ThrowUtils;
+import com.project.interview.manager.ArkManager;
 import com.project.interview.model.dto.question.QuestionEsDTO;
 import com.project.interview.model.dto.question.QuestionQueryRequest;
 import com.project.interview.model.entity.QuestionBankQuestion;
@@ -39,20 +43,17 @@ import com.project.interview.utils.SqlUtils;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
-* @author HP
-* @description 针对表【question(题目)】的数据库操作Service实现
-* @createDate 2024-09-07 22:03:22
-*/
+ * @author HP
+ * @description 针对表【question(题目)】的数据库操作Service实现
+ * @createDate 2024-09-07 22:03:22
+ */
 @Service
 public class QuestionServiceImpl extends ServiceImpl<QuestionMapper, Question>
-    implements QuestionService {
+        implements QuestionService {
 
     @Resource
     private UserService userService;
@@ -62,6 +63,9 @@ public class QuestionServiceImpl extends ServiceImpl<QuestionMapper, Question>
 
     @Resource
     private ElasticsearchRestTemplate elasticsearchRestTemplate;
+
+    @Resource
+    private ArkManager arkManager;
 
     /**
      * 校验数据
@@ -240,8 +244,6 @@ public class QuestionServiceImpl extends ServiceImpl<QuestionMapper, Question>
      *
      * @param questionQueryRequest
      * @return
-     *
-     *
      **/
     @Override
     public Page<Question> searchFromEs(QuestionQueryRequest questionQueryRequest) {
@@ -250,7 +252,7 @@ public class QuestionServiceImpl extends ServiceImpl<QuestionMapper, Question>
         List<String> tags = questionQueryRequest.getTags();
         Long questionBankId = questionQueryRequest.getQuestionBankId();
         Long userId = questionQueryRequest.getUserId();
-        String searchText= questionQueryRequest.getSearchText();
+        String searchText = questionQueryRequest.getSearchText();
         // 注意，ES 的起始页为 0
         int current = questionQueryRequest.getCurrent() - 1;
         int pageSize = questionQueryRequest.getPageSize();
@@ -272,13 +274,10 @@ public class QuestionServiceImpl extends ServiceImpl<QuestionMapper, Question>
         }
         // 必须包含所有标签
         if (CollUtil.isNotEmpty(tags)) {
-            for (String tag : tags) {
-                boolQueryBuilder.filter(QueryBuilders.termQuery("tags", tag));
-            }
+            boolQueryBuilder.filter(QueryBuilders.termsQuery("tags", tags));
         }
         // 按关键词检索
         if (StringUtils.isNotBlank(searchText)) {
-            // title = '' or content = '' or answer = ''
             boolQueryBuilder.should(QueryBuilders.matchQuery("title", searchText));
             boolQueryBuilder.should(QueryBuilders.matchQuery("content", searchText));
             boolQueryBuilder.should(QueryBuilders.matchQuery("answer", searchText));
@@ -311,6 +310,66 @@ public class QuestionServiceImpl extends ServiceImpl<QuestionMapper, Question>
         }
         page.setRecords(resourceList);
         return page;
+    }
+
+    @Override
+    public boolean aiGenerateQuestions(String questionType, int number, User user) {
+        if (ObjectUtil.hasEmpty(questionType, number, user)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数错误");
+        }
+        // 1. 定义系统 Prompt
+        String systemPrompt = "你是一位专业的程序员面试官，你要帮我生成 {数量} 道 {方向} 面试题，要求输出格式如下：\n" +
+                "\n" +
+                "1. 什么是 Java 中的反射？\n" +
+                "2. Java 8 中的 Stream API 有什么作用？\n" +
+                "3. xxxxxx\n" +
+                "\n" +
+                "除此之外，请不要输出任何多余的内容，不要输出开头、也不要输出结尾，只输出上面的列表。\n" +
+                "\n" +
+                "接下来我会给你要生成的题目{数量}、以及题目{方向}\n";
+        // 2. 拼接用户 Prompt
+        String userPrompt = String.format("题目数量：%s, 题目方向：%s", number, questionType);
+        // 3. 调用 AI 生成题目
+        String answer = arkManager.doChat(systemPrompt, userPrompt);
+        // 4. 对题目进行预处理
+        // 按行拆分
+        List<String> lines = Arrays.asList(answer.split("\n"));
+        // 移除序号和 `
+        List<String> titleList = lines.stream()
+                .map(line -> StrUtil.removePrefix(line, StrUtil.subBefore(line, " ", false))) // 移除序号
+                .map(line -> line.replace("`", "")) // 移除 `
+                .collect(Collectors.toList());
+        // 5. 保存题目到数据库中
+        List<Question> questionList = titleList.stream().map(title -> {
+            Question question = new Question();
+            question.setTitle(title);
+            question.setUserId(user.getId());
+            question.setTags("[\"待审核\"]");
+            // 优化点：可以并发生成
+            question.setAnswer(aiGenerateQuestionAnswer(title));
+            return question;
+        }).collect(Collectors.toList());
+        boolean result = this.saveBatch(questionList);
+        if (!result) {
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "保存题目失败");
+        }
+        return true;
+    }
+
+    private String aiGenerateQuestionAnswer(String title) {
+        String systemPrompt = "你是一位专业的程序员面试官，我会给你一道面试题，请帮我生成详细的题解。要求如下：\n" +
+                "\n" +
+                "1. 题解的语句要自然流畅\n" +
+                "2. 题解可以先给出总结性的回答，再详细解释\n" +
+                "3. 要使用 Markdown 语法输出\n" +
+                "\n" +
+                "除此之外，请不要输出任何多余的内容，不要输出开头、也不要输出结尾，只输出题解。\n" +
+                "\n" +
+                "接下来我会给你要生成的面试题";
+        // 2. 拼接用户 Prompt
+        String userPrompt = String.format("面试题：%s", title);
+        // 3. 调用 AI 生成题解
+        return arkManager.doChat(systemPrompt, userPrompt);
     }
 }
 

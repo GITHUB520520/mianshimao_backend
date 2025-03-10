@@ -7,6 +7,7 @@ import com.project.interview.model.dto.question.QuestionQueryRequest;
 import com.project.interview.model.entity.Post;
 import com.project.interview.model.entity.Question;
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.project.interview.model.entity.User;
 import com.project.interview.model.vo.QuestionVO;
 
 import javax.servlet.http.HttpServletRequest;
@@ -35,4 +36,6 @@ public interface QuestionService extends IService<Question> {
      * @return
      */
     Page<Question> searchFromEs(QuestionQueryRequest questionQueryRequest);
+
+    boolean aiGenerateQuestions(String questionType, int number, User user);
 }
