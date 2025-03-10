@@ -128,4 +128,8 @@ public interface UserService extends IService<User> {
      */
     List<Integer> getUserSignInRecord(long userId, Integer year);
 
+    /**
+     * 用户兑换会员（会员码兑换）
+     */
+    boolean exchangeVip(User user, String vipCode);
 }

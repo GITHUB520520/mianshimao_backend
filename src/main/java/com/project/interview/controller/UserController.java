@@ -1,6 +1,7 @@
 package com.project.interview.controller;
 
 import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.project.interview.common.BaseResponse;
 import com.project.interview.common.DeleteRequest;
@@ -11,12 +12,7 @@ import com.project.interview.constant.SystemConstant;
 import com.project.interview.constant.UserConstant;
 import com.project.interview.exception.BusinessException;
 import com.project.interview.exception.ThrowUtils;
-import com.project.interview.model.dto.user.UserAddRequest;
-import com.project.interview.model.dto.user.UserLoginRequest;
-import com.project.interview.model.dto.user.UserQueryRequest;
-import com.project.interview.model.dto.user.UserRegisterRequest;
-import com.project.interview.model.dto.user.UserUpdateMyRequest;
-import com.project.interview.model.dto.user.UserUpdateRequest;
+import com.project.interview.model.dto.user.*;
 import com.project.interview.model.entity.User;
 import com.project.interview.model.vo.LoginUserVO;
 import com.project.interview.model.vo.UserVO;
@@ -324,4 +320,20 @@ public class UserController {
         return ResultUtils.success(userSignInRecord);
     }
 
+    /**
+     * 兑换会员
+     * @param vipExchangeRequest
+     * @param request
+     * @return
+     */
+    @PostMapping("/exchange/vip")
+    public BaseResponse<Boolean> exchangeVip(@RequestBody VipExchangeRequest vipExchangeRequest,
+                                             HttpServletRequest request) {
+        if(vipExchangeRequest == null) throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        User loginUser = userService.getLoginUser(request);
+        String vipCode = vipExchangeRequest.getVipCode();
+        ThrowUtils.throwIf(StrUtil.isBlank(vipCode), ErrorCode.PARAMS_ERROR, "会员码不可为空！");
+        boolean b = userService.exchangeVip(loginUser, vipCode);
+        return ResultUtils.success(b);
+    }
 }

@@ -65,6 +65,26 @@ public class User implements Serializable {
     private Date updateTime;
 
     /**
+     * 会员过期时间
+     */
+    private Date vipExpireTime;
+
+    /**
+     * 会员兑换码
+     */
+    private String vipCode;
+
+    /**
+     * 会员编号
+     */
+    private Long vipNumber;
+
+    /**
+     * 是否为会员
+     */
+    private Integer isVip;
+
+    /**
      * 是否删除
      */
     @TableLogic

@@ -4,6 +4,10 @@ import static com.project.interview.constant.UserConstant.USER_LOGIN_STATE;
 
 import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.date.DateUtil;
+import cn.hutool.core.io.FileUtil;
+import cn.hutool.json.JSONArray;
+import cn.hutool.json.JSONUtil;
 import com.alibaba.nacos.api.exception.NacosException;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -12,9 +16,11 @@ import com.project.interview.constant.CommonConstant;
 import com.project.interview.constant.RedisConstant;
 import com.project.interview.constant.SystemConstant;
 import com.project.interview.exception.BusinessException;
+import com.project.interview.exception.ThrowUtils;
 import com.project.interview.manager.CrawlerDetectManager;
 import com.project.interview.mapper.UserMapper;
 import com.project.interview.model.dto.user.UserQueryRequest;
+import com.project.interview.model.dto.user.VipCode;
 import com.project.interview.model.entity.User;
 import com.project.interview.model.enums.UserRoleEnum;
 import com.project.interview.model.vo.LoginUserVO;
@@ -23,9 +29,13 @@ import com.project.interview.service.UserService;
 import com.project.interview.utils.DeviceUtils;
 import com.project.interview.utils.SqlUtils;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.Year;
 import java.util.*;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -35,6 +45,7 @@ import org.redisson.api.RBitSet;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.BeanUtils;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
 
@@ -57,6 +68,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
      * 盐值，混淆密码
      */
     public static final String SALT = "hrl";
+
+    @Resource
+    private ResourceLoader resourceLoader;
+
+    // 文件读写锁（确保并发安全）
+    private final ReentrantLock fileLock = new ReentrantLock();
 
     @Override
     public long userRegister(String userAccount, String userPassword, String checkPassword) {
@@ -311,5 +328,72 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             index = bitSet.nextSetBit(index + 1);
         }
         return signRecords;
+    }
+
+    @Override
+    public boolean exchangeVip(User user, String vipCode) {
+        ThrowUtils.throwIf(user == null || StringUtils.isBlank(vipCode), ErrorCode.PARAMS_ERROR);
+        VipCode ans = validateAndMarkVipCode(vipCode);
+        String code = ans.getCode();
+        Date date = DateUtil.offsetMonth(new Date(), 12);
+        user.setIsVip(1);
+        user.setVipCode(code);
+        user.setVipExpireTime(date);
+        boolean b = this.updateById(user);
+        if (!b) {
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "开通会员失败，操作数据库失败");
+        }
+        return b;
+    }
+
+
+    /**
+     * 校验兑换码并标记为已使用
+     */
+    private VipCode validateAndMarkVipCode(String vipCode) {
+        fileLock.lock(); // 加锁保证文件操作原子性
+        try {
+            // 读取 JSON 文件
+            JSONArray jsonArray = readVipCodeFile();
+
+            // 查找匹配的未使用兑换码
+            List<VipCode> codes = JSONUtil.toList(jsonArray, VipCode.class);
+            VipCode target = codes.stream()
+                    .filter(code -> code.getCode().equals(vipCode) && !code.isHasUsed())
+                    .findFirst()
+                    .orElseThrow(() -> new BusinessException(ErrorCode.PARAMS_ERROR, "无效的兑换码"));
+
+            // 标记为已使用
+            target.setHasUsed(true);
+
+            // 写回文件
+            writeVipCodeFile(JSONUtil.parseArray(codes));
+            return target;
+        } finally {
+            fileLock.unlock();
+        }
+    }
+
+    private JSONArray readVipCodeFile() {
+        try {
+            org.springframework.core.io.Resource resource = resourceLoader.getResource("classpath:biz/vipCode.json");
+            String s = FileUtil.readString(resource.getFile(), StandardCharsets.UTF_8);
+            return JSONUtil.parseArray(s);
+        } catch (IOException e) {
+            log.error("读取文件失败");
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR);
+        }
+    }
+
+    private void writeVipCodeFile(JSONArray objects){
+        String jsonStr = JSONUtil.toJsonStr(objects);
+        File file = null;
+        try {
+            file = resourceLoader.getResource("classpath:biz/vipCode.json").getFile();
+            FileUtil.writeString(jsonStr, file, StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            log.error("写入文件失败");
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR);
+        }
     }
 }

@@ -12,12 +12,17 @@
         <result property="userRole" column="userRole" jdbcType="VARCHAR"/>
         <result property="createTime" column="createTime" jdbcType="TIMESTAMP"/>
         <result property="updateTime" column="updateTime" jdbcType="TIMESTAMP"/>
+        <result property="vipExpireTime" column="vipExpireTime" jdbcType="TIMESTAMP" />
+        <result property="vipCode" column="vipCode" jdbcType="VARCHAR"/>
+        <result property="vipNumber" column="vipNumber" jdbcType="BIGINT"/>
+        <result property="isVip" column="isVip" jdbcType="INTEGER"/>
         <result property="isDelete" column="isDelete" jdbcType="TINYINT"/>
     </resultMap>
 
     <sql id="Base_Column_List">
         id,
         userName,userAvatar,userProfile,
-        userRole,createTime,updateTime,isDelete
+        userRole,createTime,updateTime,vipExpireTime,vipCode,
+        vipNumber,isVip,isDelete
     </sql>
 </mapper>
