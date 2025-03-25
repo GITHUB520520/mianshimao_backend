@@ -26,9 +26,14 @@ public class NacosManager {
     @Value("${nacos.config.group}")
     private String group;
 
+    /**
+     * 将违规的 ip 地址进行封禁
+     * @param ip
+     * @return
+     * @throws NacosException
+     */
     public boolean addBlackIp(String ip) throws NacosException {
         String content = configService.getConfig(dataId, group, 5000);
-//        log.info("nacos config content: {}", content);
         Yaml yaml = new Yaml();
         Map map = yaml.loadAs(content, Map.class);
         // 获取 ip 黑名单

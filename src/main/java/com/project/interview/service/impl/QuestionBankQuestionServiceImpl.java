@@ -124,9 +124,6 @@ public class QuestionBankQuestionServiceImpl extends ServiceImpl<QuestionBankQue
     public QuestionBankQuestionVO getQuestionBankQuestionVO(QuestionBankQuestion questionBankQuestion, HttpServletRequest request) {
         // 对象转封装类
         QuestionBankQuestionVO questionBankQuestionVO = QuestionBankQuestionVO.objToVo(questionBankQuestion);
-
-        // todo 可以根据需要为封装对象补充值，不需要的内容可以删除
-        // region 可选
         // 1. 关联查询用户信息
         Long userId = questionBankQuestion.getUserId();
         User user = null;
@@ -135,7 +132,6 @@ public class QuestionBankQuestionServiceImpl extends ServiceImpl<QuestionBankQue
         }
         UserVO userVO = userService.getUserVO(user);
         questionBankQuestionVO.setUser(userVO);
-        // endregion
 
         return questionBankQuestionVO;
     }
@@ -159,8 +155,6 @@ public class QuestionBankQuestionServiceImpl extends ServiceImpl<QuestionBankQue
             return QuestionBankQuestionVO.objToVo(questionBankQuestion);
         }).collect(Collectors.toList());
 
-        // todo 可以根据需要为封装对象补充值，不需要的内容可以删除
-        // region 可选
         // 1. 关联查询用户信息
         Set<Long> userIdSet = questionBankQuestionList.stream().map(QuestionBankQuestion::getUserId).collect(Collectors.toSet());
         Map<Long, List<User>> userIdUserListMap = userService.listByIds(userIdSet).stream()
@@ -174,12 +168,17 @@ public class QuestionBankQuestionServiceImpl extends ServiceImpl<QuestionBankQue
             }
             questionBankQuestionVO.setUser(userService.getUserVO(user));
         });
-        // endregion
 
         questionBankQuestionVOPage.setRecords(questionBankQuestionVOList);
         return questionBankQuestionVOPage;
     }
 
+    /**
+     * 批量向题库中增加题目
+     * @param questionIdList 题目列表
+     * @param questionBankId 题库 id
+     * @param loginUser 当前用户
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void batchAddQuestionsToBank(List<Long> questionIdList, Long questionBankId, User loginUser){
@@ -260,7 +259,7 @@ public class QuestionBankQuestionServiceImpl extends ServiceImpl<QuestionBankQue
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "要删除的题目列表为空");
         }
         for (Long questionId : questionIdList) {
-            boolean result = this.removeById(questionId);
+            boolean result = questionService.removeById(questionId);
             if (!result) {
                 throw new BusinessException(ErrorCode.OPERATION_ERROR, "删除题目失败");
             }
@@ -274,6 +273,10 @@ public class QuestionBankQuestionServiceImpl extends ServiceImpl<QuestionBankQue
         }
     }
 
+    /**
+     * 供内部使用的批量增加题目
+     * @param questionBankQuestionList
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void batchAddQuestionsToBankInner(List<QuestionBankQuestion> questionBankQuestionList){
